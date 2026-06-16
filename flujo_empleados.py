@@ -7,7 +7,7 @@ from helpers.conn import get_sql_engine
 from sqlalchemy import text
 from airflow.providers.standard.operators.python import PythonOperator
 
-# Configuración de constantes
+
 APPSCRIPT = "https://script.google.com/macros/s/AKfycbwtntNjQutC1x_Bz02seUqFdpTJIjgMYwMJugaasbAIN_muuAcwPuKUfqC8SEGIWsz6/exec"
 DB_CONN = "db_rh"
 SCHEMA_DESTINO = "dbo"
@@ -15,20 +15,17 @@ SCHEMA_DESTINO = "dbo"
 def consulta_sql():
     engine = get_sql_engine(DB_CONN)
     query = '''
-    SELECT TOP (1000) [NumeroEmpleado]
-        ,[NombreEmpleado]
-        ,[ApellidoPaterno]
-        ,[ApellidoMaterno]
-        ,[FechaIngresoEmpresa]
-        ,[FechaIngresoOrganizacion]
-        ,[ActivoRH]
-        ,[DatosBasicos_CorreoCorporativo]
-        ,[DatosBasicos_FechaNacimiento]
-        ,[CamposExtraPersona_AtributoSUCURSAL]
-        ,[CamposExtraPersona_AtributoESTADO]
-        ,[CamposExtraPersona_AtributoRAZONSOCIAL]
-        ,[Posicion_NombrePosicion]
-        ,[Atributos_ClaveAtributo]
+    SELECT TOP (1000) [NumeroEmpleado] as [Numero de Empleado]
+        ,[NombreEmpleado] as [Nombre] 
+        ,[ApellidoPaterno] as [Apellido Paterno]
+        ,[ApellidoMaterno] as [Apellido Materno]
+        ,[FechaIngresoEmpresa] as [Fecha de Ingreso]
+        ,[DatosBasicos_CorreoCorporativo] as [Correo Corporativo]
+        ,[DatosBasicos_FechaNacimiento] as [Fecha de Nacimiento]
+        ,[CamposExtraPersona_AtributoSUCURSAL] as [Sucursal]
+        ,[CamposExtraPersona_AtributoESTADO] as [Estado]
+        ,[Posicion_NombrePosicion] as [Nombre Posicion]
+        ,[Atributos_ClaveAtributo]as [Atributo]
     FROM [DBBI_RH].[dbo].[WB_Empleados]
     WHERE [ActivoRH] LIKE 'Activo'
     '''
@@ -57,7 +54,7 @@ def consulta_sql():
             data=json.dumps(payload), 
             headers={"Content-Type": "application/json"},
             allow_redirects=True, 
-            timeout=60        
+            timeout=120        
         )
         
         print(f"Código de respuesta HTTP: {response.status_code}")
@@ -79,12 +76,12 @@ def consulta_sql():
 with DAG(
     dag_id='dag_rh_empleados_to_sheets',
     start_date=datetime(2026, 1, 1),
-    schedule='@daily',  # <--- Corregido de @dayli a @daily
+    schedule= '0 6 * * *',  
     catchup=False,
     tags=['rh'],
 ) as dag:
 
-    # Corrección menor de identación en esta tarea para evitar IndentationError
+    
     task_enviar_datos = PythonOperator(
         task_id='extraer_y_subir_empleados',
         python_callable=consulta_sql
